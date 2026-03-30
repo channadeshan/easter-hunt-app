@@ -8,29 +8,47 @@ import authStatusRoute from "./routes/authStatus.js";
 import cookieParser from "cookie-parser";
 import "./config/redis.js";
 import connectDB from "./config/db.js";
-
+import { Participant } from "./models/Participant.js";
 const app = express();
+
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
-connectDB();
-app.use("/api/auth", authStatusRoute); // Add this line to include the auth status route
-app.use("/api/admin", adminRoutes);
-app.use("/api/parti", participantRoutes); // Add this line to include participant routes
 
+// Database Connection
+connectDB();
+
+// Routes
+app.use("/api/auth", authStatusRoute);
+app.use("/api/admin", adminRoutes);
+app.use("/api/parti", participantRoutes);
+
+// Create HTTP Server
 const httpServer = createServer(app);
 
-const io = new Server(httpServer, {
+// Initialize Socket.io
+export const io = new Server(httpServer, {
   cors: {
     origin: "*",
   },
 });
 
-const PORT = process.env.PORT || "0000";
+// Socket Logic
+io.on("connection", (socket) => {
+  console.log(`User connected: ${socket.id}`);
 
-// Only for Development Environment: Uncomment this to generate a hash for your admin password, then delete this function and its call.
-// import { generateHash } from "./helper.js";
-// generateHash();
+  // When a user connects, we tell everyone the new total count
+  io.emit("live_player_count", io.engine.clientsCount);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  socket.on("disconnect", () => {
+    // When a user leaves, update the count for everyone
+    io.emit("live_player_count", io.engine.clientsCount);
+  });
+});
+
+// START THE SERVER HERE (Outside the socket block)
+const PORT = process.env.PORT || 3000; // Use a real port like 3000
+
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server and WebSockets running on port ${PORT}`);
 });
