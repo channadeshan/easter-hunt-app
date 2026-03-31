@@ -30,7 +30,7 @@ COPY package*.json ./
 
 # Install ONLY production dependencies (skips TypeScript, nodemon, etc.)
 # Using 'npm ci' is faster and more reliable in Docker than 'npm install'
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy ONLY the compiled JavaScript from the builder stage
 COPY --from=builder /app/dist ./dist
