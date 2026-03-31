@@ -8,10 +8,19 @@ import authStatusRoute from "./routes/authStatus.js";
 import cookieParser from "cookie-parser";
 import "./config/redis.js";
 import connectDB from "./config/db.js";
-import { Participant } from "./models/Participant.js";
+import activityRoute from "./routes/activityRoute.js";
+import cors from "cors";
 const app = express();
 
 // Middleware
+const corsOptions: cors.CorsOptions = {
+  origin: "http://localhost:5173", // Allow only your frontend
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true, // Allow cookies if needed
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -19,6 +28,7 @@ app.use(cookieParser());
 connectDB();
 
 // Routes
+app.use("/api", activityRoute);
 app.use("/api/auth", authStatusRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/parti", participantRoutes);
@@ -29,7 +39,9 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 export const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: "http://localhost:5173", // exact frontend URL, no trailing slash
+    credentials: true, // required — allows cookies through
+    methods: ["GET", "POST"],
   },
 });
 

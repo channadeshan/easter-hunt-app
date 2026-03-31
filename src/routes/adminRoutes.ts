@@ -52,7 +52,7 @@ router.post("/login", async (req: Request, res: Response) => {
     res.cookie("admin_session", token, {
       httpOnly: true, // JavaScript cannot access this cookie (prevents XSS attacks)
       secure: process.env.IS_PRODUCTION === "true", // Use true if hosting on HTTPS
-      sameSite: "strict", // Protects against CSRF attacks
+      sameSite: "none", // Protects against CSRF attacks
       maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
     });
 

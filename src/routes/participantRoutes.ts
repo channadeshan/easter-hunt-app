@@ -45,7 +45,7 @@ app.post(
       res.cookie("participant_session", sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "none",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
       });
 
@@ -136,18 +136,21 @@ app.post(
           return;
         }
 
+        const activityEggMessage = `Just claimed ${claimedEgg.name}!`;
+
         // Save to the Activity Ledger
         await Activity.create({
           type: "EGG_CLAIMED",
           participantId: mongoosePlayerId,
           itemName: claimedEgg.name,
+          message: activityEggMessage,
         });
 
         // Broadcast the triumph to the campus
         io.emit("new_activity", {
           type: "EGG_CLAIMED",
-          message: `${player.username} just claimed ${claimedEgg.name}!`,
           emoji: player.emojiUrl,
+          message: activityEggMessage,
           timestamp: new Date(),
         });
 
@@ -188,19 +191,22 @@ app.post(
           return;
         }
 
+        const activityHintMessage = `Discovered a hint!`;
+
         // Save to Activity Ledger (TypeScript error fixed cleanly)
         await Activity.create({
           type: "HINT_DISCOVERED",
           participantId: mongoosePlayerId,
           itemName: `Hint for ${(discoveredHint.eggId as any).name}`,
+          message: activityHintMessage,
         });
 
         // Broadcast the hint to everyone so they can use it
         io.emit("new_activity", {
           type: "HINT_DISCOVERED",
-          message: `${player.username} discovered a new hint!`,
           hintText: discoveredHint.text,
           emoji: player.emojiUrl,
+          message: activityHintMessage,
           timestamp: new Date(),
         });
 
@@ -232,15 +238,14 @@ app.post(
 );
 
 app.get(
-  "/eggs/available",
+  "/eggs",
   requireParticipant,
   async (req: ParticipantRequest, res: Response): Promise<void> => {
     try {
       // Find all eggs where isClaimed is exactly false
-      // SECURITY: We use .select() to ONLY return the safe fields.
-      // If we didn't do this, players could steal the uniqueCode and cheat!
+      // SECURITY: The minus sign (-) tells Mongoose to return all fields EXCEPT uniqueCode
       const availableEggs = await Egg.find({ isClaimed: false }).select(
-        "name emoji color _id",
+        "-uniqueCode",
       );
 
       res.status(200).json({
@@ -259,12 +264,22 @@ app.get(
   requireParticipant,
   async (req: ParticipantRequest, res: Response): Promise<void> => {
     try {
-      // Find all hints where isDiscovered is exactly true
-      const discoveredHints = await Hint.find({ isDiscovered: true })
-        .select("text eggId discoveredBy _id") // Keep the secret code out of here too
-        .populate("eggId", "name emoji color") // Attach the parent egg details!
-        .populate("discoveredBy", "username") // So you can show "Discovered by Alex"
-        .sort({ _id: -1 }); // Sort by newest first
+      // 1. Find the hints, but apply a strict 'match' filter to the Egg population
+      const discoveredHintsRaw = await Hint.find({ isDiscovered: true })
+        .select("-uniqueCode")
+        .populate({
+          path: "eggId",
+          select: "name emoji color",
+          match: { isClaimed: false }, // MAGIC: Only populate if the egg is NOT claimed!
+        })
+        .populate("discoveredBy", "username")
+        .sort({ updatedAt: -1 });
+
+      // 2. If the egg was already claimed, Mongoose sets 'eggId' to null.
+      // We filter those out so we only send relevant hints to the frontend.
+      const discoveredHints = discoveredHintsRaw.filter(
+        (hint) => hint.eggId !== null,
+      );
 
       res.status(200).json({
         count: discoveredHints.length,

@@ -7,6 +7,7 @@ export interface IActivity extends Document {
   type: "EGG_CLAIMED" | "HINT_DISCOVERED";
   participantId: Types.ObjectId;
   itemName: string;
+  message: string;
   createdAt: Date;
 }
 
@@ -28,6 +29,11 @@ const ActivitySchema: Schema = new Schema({
     type: String,
     required: true,
   },
+  message: {
+    type: String,
+    required: true,
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,

@@ -97,3 +97,52 @@ export const requireParticipant = async (
       .json({ error: "Internal server error while verifying session." });
   }
 };
+
+export interface UniversalAuthRequest extends Request {
+  role?: "organizer" | "participant";
+  participantId?: string; // Only exists if they are a participant
+}
+
+export const requireAnyAuth = async (
+  req: UniversalAuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    // --- CHECK 1: Is it the Organizer? ---
+    const adminCookie = req.cookies.admin_session;
+    if (adminCookie) {
+      try {
+        const secret = process.env.SESSION_SECRET as string;
+        const decoded = jwt.verify(adminCookie, secret) as any;
+
+        if (decoded.role === "organizer") {
+          req.role = "organizer";
+          return next(); // Pass them through!
+        }
+      } catch (err) {
+        // Token invalid or expired. Silently fall through to check Participant.
+      }
+    }
+
+    // --- CHECK 2: Is it a Participant? ---
+    const participantCookie = req.cookies.participant_session;
+    if (participantCookie) {
+      const participantId = await redis.get(`session:${participantCookie}`);
+
+      if (participantId) {
+        req.role = "participant";
+        req.participantId = participantId;
+        return next(); // Pass them through!
+      }
+    }
+
+    // --- CHECK 3: Neither worked ---
+    res
+      .status(401)
+      .json({ error: "Unauthorized. You must be logged in to view this." });
+  } catch (error) {
+    console.error("Universal Auth Error:", error);
+    res.status(500).json({ error: "Server error during authentication." });
+  }
+};
