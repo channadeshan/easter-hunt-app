@@ -39,7 +39,7 @@ const httpServer = createServer(app);
 // Initialize Socket.io
 export const io = new Server(httpServer, {
   cors: {
-    origin: "http://https://easter-hunt-app-frontend.vercel.app", // exact frontend URL, no trailing slash
+    origin: "https://easter-hunt-app-frontend.vercel.app", // exact frontend URL, no trailing slash
     credentials: true, // required — allows cookies through
     methods: ["GET", "POST"],
   },
