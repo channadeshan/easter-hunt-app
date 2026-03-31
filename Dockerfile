@@ -1,19 +1,42 @@
+# ==========================================
+# STAGE 1: The Builder
+# ==========================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency files
+COPY package*.json ./
+
+# Install ALL dependencies (including devDependencies like TypeScript)
+RUN npm install
+
+# Copy source code and compile
+COPY . .
+RUN npx tsc
+
+# ==========================================
+# STAGE 2: The Production Runner
+# ==========================================
 FROM node:20-alpine
 
 WORKDIR /app
 
-# 1. Copy dependencies first (for caching)
-COPY package.json package-lock.json* ./
+# Set Node to production mode
+ENV NODE_ENV=production
 
-# 2. Install dependencies (including typescript)
-RUN npm install
+# Copy only the package files
+COPY package*.json ./
 
-# 3. Copy your actual source code (the .ts files)
-COPY . .
+# Install ONLY production dependencies (skips TypeScript, nodemon, etc.)
+# Using 'npm ci' is faster and more reliable in Docker than 'npm install'
+RUN npm ci --omit=dev
 
-# 4. Now compile the TypeScript to JavaScript
-RUN npx tsc
+# Copy ONLY the compiled JavaScript from the builder stage
+COPY --from=builder /app/dist ./dist
 
+# Expose the port
 EXPOSE 5050
 
+# Run the compiled JavaScript
 CMD ["node", "dist/index.js"]
