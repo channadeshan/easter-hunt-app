@@ -20,6 +20,7 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 204,
 };
 
+app.set("trust proxy", 1);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
