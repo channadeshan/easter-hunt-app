@@ -51,7 +51,7 @@ router.post("/login", async (req: Request, res: Response) => {
     // 5. Send the token in a secure HttpOnly cookie
     res.cookie("admin_session", token, {
       httpOnly: true, // JavaScript cannot access this cookie (prevents XSS attacks)
-      secure: process.env.IS_PRODUCTION === "true", // Use true if hosting on HTTPS
+      secure: true, // Use true if hosting on HTTPS
       sameSite: "none", // Protects against CSRF attacks
       maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
     });
@@ -261,8 +261,8 @@ router.post("/logout", (req: Request, res: Response): void => {
   // 1. Tell the browser to instantly expire and delete the cookie
   res.clearCookie("admin_session", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    secure: true,
+    sameSite: "none",
   });
 
   // 2. Send a success message
