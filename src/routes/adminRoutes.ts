@@ -52,7 +52,7 @@ router.post("/login", async (req: Request, res: Response) => {
     res.cookie("admin_session", token, {
       httpOnly: true, // JavaScript cannot access this cookie (prevents XSS attacks)
       secure: true, // Use true if hosting on HTTPS
-      sameSite: "none", // Protects against CSRF attacks
+      sameSite: "lax", // Protects against CSRF attacks
       maxAge: 12 * 60 * 60 * 1000, // 12 hours in milliseconds
     });
 
@@ -262,7 +262,7 @@ router.post("/logout", (req: Request, res: Response): void => {
   res.clearCookie("admin_session", {
     httpOnly: true,
     secure: true,
-    sameSite: "none",
+    sameSite: "lax",
   });
 
   // 2. Send a success message

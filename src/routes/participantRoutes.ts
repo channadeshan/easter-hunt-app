@@ -44,8 +44,8 @@ app.post(
       // 4. Send the Session ID to the phone in a 24-hour HttpOnly cookie
       res.cookie("participant_session", sessionId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
+        secure: true,
+        sameSite: "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
       });
 
